@@ -1,26 +1,37 @@
-from fastapi import FastAPI, HTTPException
-import boto3
-from botocore.exceptions import NoCredentialsError
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
+from typing import List
+import httpx
+import asyncio
+import io
+from queue import Queue
+from dependencies import get_queue_key_creation
+from dependencies import get_queue_file_creation
 
-app = FastAPI()
+router = APIRouter()
 
-# AWS 설정
-AWS_ACCESS_KEY = "YOUR_AWS_ACCESS_KEY"
-AWS_SECRET_KEY = "YOUR_AWS_SECRET_KEY"
-BUCKET_NAME = "YOUR_BUCKET_NAME"
-REGION_NAME = "YOUR_REGION_NAME"
+async def get_image_from_cdn(cdn_url: str) -> bytes:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(cdn_url)
 
-# boto3 클라이언트 초기화
-s3 = boto3.client('s3', region_name=REGION_NAME, aws_access_key_id=AWS_ACCESS_KEY, aws_secret_access_key=AWS_SECRET_KEY)
+    if response.status_code != 200:
+        raise HTTPException(status_code=400, detail="이미지를 가져오는데 실패했습니다.")
 
-@app.get("/get-image/")
-async def get_image_from_s3(file_key: str):
-    try:
-        file_byte_string = s3.get_object(Bucket=BUCKET_NAME, Key=file_key)["Body"].read()
-        return {"file": file_byte_string}
-    except NoCredentialsError:
-        raise HTTPException(status_code=400, detail="Credentials not available")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return response.content
 
-# 서버 실행: uvicorn 파일이름:app --reload
+@router.get("/get-images/")
+async def get_images(queue_key: Queue = Depends(get_queue_key_creation), queue_file: Queue = Depends(get_queue_file_creation)):
+    data = queue_key.get()
+    identifiers = data['image_identifiers']
+    quest_id = data['questid']
+    
+    images = await asyncio.gather(*[get_image_from_cdn(cdn_url) for cdn_url in identifiers])
+    
+    image_data = {
+        "images": images, 
+        "questid": quest_id
+    }
+    queue_file.put(image_data)
+    print(type(images[0]))
+
+    return StreamingResponse(io.BytesIO(images[0]), media_type="image/jpeg")

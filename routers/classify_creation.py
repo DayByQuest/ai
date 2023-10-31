@@ -1,31 +1,27 @@
-import numpy as np
-import torch
-from PIL import Image
-import clip
-import json
-import requests
+from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
+from dependencies import get_queue_file_creation
+from queue import Queue
+from pydantic import BaseModel
+from model.model import classifier
+from typing import List
 
-def classify(config) -> list:
-	device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
-	model, preprocess = clip.load("ViT-L/14@336px")
-	model.to(device).eval()
+router = APIRouter()
 
-	labels_url = 'https://storage.googleapis.com/download.tensorflow.org/data/imagenet_class_index.json'
-	labels = json.loads(requests.get(labels_url).text)
-	imagenet_labels = []
-	imagenet_labels = [labels[str(k)][1] for k in range(len(labels))]
-	text_descriptions = [f"This is a photo of a {label}" for label in imagenet_labels]
-	text_tokens = clip.tokenize(text_descriptions).to(device)
+class DataToSend(BaseModel):
+  label_list: List[str]
+  questid: int
 
-	image = "instance"
-	image_input = torch.tensor(image).to(device)
+instant_classifier = classifier()
 
-	with torch.no_grad():
-			image_features = model.encode_image(image_input).float()
-			text_features = model.encode_text(text_tokens).float()
-			
-			image_features /= image_features.norm(dim=-1, keepdim=True)
-			text_features /= text_features.norm(dim=-1, keepdim=True)
+@router.patch('/result/creation/')
+async def classify(queue: Queue = Depends(get_queue_file_creation)):
+  data = queue.get()
+  images = data['images']
+  quest_id = data['questid']
 
-	text_probs = (100.0 * image_features @ text_features.T).softmax(dim=-1)
-	top_probs, top_labels = text_probs.cpu().topk(config.top_k, dim=-1)
+  top_probs, label_list = instant_classifier.classify(images)
+  label_list = list(set(label_list))
+  
+  data_to_send = DataToSend(label_list=label_list, questid=quest_id)
+  return JSONResponse(content=data_to_send.dict())

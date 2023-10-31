@@ -1,20 +1,18 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from dependencies import get_queue_key_creation
+from queue import Queue
 
 router = APIRouter()
 
 class DataPayload(BaseModel):
-  key1: str
-  key2: str
-  key3: str
-  questid: int
+  image_identifiers: list
 
-@router.post("/receive-data/")
-async def receive_data(payload: DataPayload):
+@router.post("/post/{QUEST_ID}/shot")
+async def receive_data(QUEST_ID: int, payload: DataPayload,  queue: Queue = Depends(get_queue_key_creation)):
   received_data = {
-    "received_key1": payload.key1,
-    "received_key2": payload.key2,
-    "received_key3": payload.key3, 
-    "received_questid": payload.questid
+    "image_identifiers": payload.image_identifiers,
+    "questid": QUEST_ID
   }
-  return received_data
+  queue.put(received_data)
+  return payload.image_identifiers, QUEST_ID, queue.qsize()
