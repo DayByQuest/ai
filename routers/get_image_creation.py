@@ -19,7 +19,7 @@ async def get_image_from_cdn(cdn_url: str) -> bytes:
 
     return response.content
 
-@router.get("/get-images/")
+@router.get("/get-images/shot")
 async def get_images(queue_key: Queue = Depends(get_queue_key_creation), queue_file: Queue = Depends(get_queue_file_creation)):
     data = queue_key.get()
     identifiers = data['image_identifiers']
@@ -32,6 +32,5 @@ async def get_images(queue_key: Queue = Depends(get_queue_key_creation), queue_f
         "questid": quest_id
     }
     queue_file.put(image_data)
-    print(type(images[0]))
 
     return StreamingResponse(io.BytesIO(images[0]), media_type="image/jpeg")
