@@ -24,13 +24,12 @@ async def classify(queue: Queue = Depends(get_queue_file_judgment)):
   post_id = data['postid']
 
   # 백엔드 서버의 엔드포인트 URL
-  BACKEND_URL = os.getenv('BACKEND_URL')
+  BACKEND_URL = os.getenv('BACKEND_URL')  
   BACKEND_URL = BACKEND_URL + "/post/" + str(post_id) + "/judge"
-  # success = instant_classifier.classify_judgment(images, label)
-  success="SUCCESS"
+  success = instant_classifier.classify_judgment(images, label)
+  # success="SUCCESS" # 디버깅용 코드
   
   data_to_send = DataToSend(judgement=success)
-  
   try:
       # 비동기 클라이언트를 사용하여 백엔드 서버에 PATCH 요청을 보냅니다.
       async with httpx.AsyncClient() as client:
