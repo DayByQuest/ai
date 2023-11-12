@@ -19,19 +19,17 @@ async def get_image_from_cdn(cdn_url: str) -> bytes:
 
     return response.content
 
-@router.get("/get-images/judge")
+@router.get("/post/get-images/{POST_ID}/judge")
 async def get_images(queue_key: Queue = Depends(get_queue_key_judgment), queue_file: Queue = Depends(get_queue_file_judgment)):
     data = queue_key.get()
     identifiers = data['image_identifiers']
     label = data['label']
-    post_id = data['postid']
     
     images = await asyncio.gather(*[get_image_from_cdn(cdn_url) for cdn_url in identifiers])
     
     image_data = { 
         "images": images,
         "label": label, 
-        "postid": post_id
     }
     queue_file.put(image_data)
 
