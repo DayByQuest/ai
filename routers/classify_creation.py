@@ -16,15 +16,14 @@ class DataToSend(BaseModel):
 
 instant_classifier = classifier()
 
-@router.patch('/result/shot')
-async def classify(queue: Queue = Depends(get_queue_file_creation)):
+@router.patch('/quest/{QUEST_ID}/shot')
+async def classify(QUEST_ID: int, queue: Queue = Depends(get_queue_file_creation)):
     data = queue.get()
     images = data['images']
-    quest_id = data['questid']
 
     # 백엔드 서버의 엔드포인트 URL
     BACKEND_URL = os.getenv('BACKEND_URL')
-    BACKEND_URL = BACKEND_URL + "/quest/" + str(quest_id) + "/shot"
+    BACKEND_URL = BACKEND_URL + "/quest/" + str(QUEST_ID) + "/shot"
 
     top_probs, label_list = instant_classifier.classify_creation(images)
     label_list = list(set(label_list))
