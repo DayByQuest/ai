@@ -17,15 +17,15 @@ class DataToSend(BaseModel):
 instant_classifier = classifier()
 
 @router.patch('/post/{POST_ID}/judge')
-async def classify(queue: Queue = Depends(get_queue_file_judgment)):
+async def classify(POST_ID: int, queue: Queue = Depends(get_queue_file_judgment)):
   data = queue.get()
   images = data['images']
   label = data['label']
-  post_id = data['postid']
 
   # 백엔드 서버의 엔드포인트 URL
   BACKEND_URL = os.getenv('BACKEND_URL')  
-  BACKEND_URL = BACKEND_URL + "/post/" + str(post_id) + "/judge"
+  BACKEND_URL = BACKEND_URL + "/post/" + str(POST_ID) + "/judge"
+  
   success = instant_classifier.classify_judgment(images, label)
   # success="SUCCESS" # 디버깅용 코드
   
