@@ -10,7 +10,7 @@ from typing import List
 class classifier():
   def __init__(self):
     self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
-    self.model, self.preprocess = clip.load("ViT-L/14@336px")
+    self.model, self.preprocess = clip.load("RN50")
     labels_url = 'https://storage.googleapis.com/download.tensorflow.org/data/imagenet_class_index.json'
     self.labels = json.loads(requests.get(labels_url).text)
 	
@@ -21,7 +21,7 @@ class classifier():
     self.text_tokens = clip.tokenize(text_descriptions).to(self.device)
 
   def __del__(self):
-    print("장시간 사용하지 않아 메모리를 해제합니다.")
+    print("메모리를 해제합니다.")
 
   def classify_creation(self, source: List[str]):
     images = []
