@@ -1,26 +1,32 @@
 from fastapi import FastAPI
 from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
+import os
+
 load_dotenv()
 
+from routers.judgment import router as total_judge
+from routers.creation import router as total_shot
 
-from routers.classify_creation import router as classify_creation
-from routers.classify_judgment import router as classify_judgment
-from routers.get_image_creation import router as get_image_creation
-from routers.get_image_judgment import router as get_image_judgment
-from routers.receive_info_creation import router as receive_info_creation
-from routers.receive_info_judgment import router as receive_info_judgment
+BACKEND_URL = os.getenv('BACKEND_URL')  
+
+origins = [
+    BACKEND_URL
+]
 
 app = FastAPI()
 
-app.include_router(classify_creation)
-app.include_router(classify_judgment)
-app.include_router(get_image_creation)
-app.include_router(get_image_judgment)
-app.include_router(receive_info_creation)
-app.include_router(receive_info_judgment)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
+app.include_router(total_judge)
+app.include_router(total_shot)
 
 @app.get("/")
 async def root():
-    return {"message": "Hello Bigger Applications!"}
-
+    return {"DayByQuest. The default page."}
