@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ValidationError
 from typing import List
 from fastapi.responses import JSONResponse
-from model.model import classifier
+from dependencies import get_model
 import httpx
 import asyncio
 import io
@@ -29,28 +29,17 @@ async def get_image_from_cdn(cdn_url: str) -> bytes:
 
 
 async def run_model(image_data: list, BACKEND_URL: str, CLOUDFRONT_URL: str):
-    # AI 모델 추론 수행
-    # 예: result = model.predict(image_data)
-
     images = await asyncio.gather(*[get_image_from_cdn(CLOUDFRONT_URL + cdn_url) for cdn_url in image_data])
     
-    instant_classifier = classifier()
-    
-    top_probs, label_list = instant_classifier.classify_creation(images)
+    model = get_model()    
+    top_probs, label_list = model.classify_creation(images)
     label_list = list(set(label_list))
     # label_list = ['banana', 'apple', 'train'] # 디버깅용 코드
 
+    print("Inference Finished.")
     data_to_send = DataToSend(labels=label_list)
     async with httpx.AsyncClient() as client:
           response = await client.patch(BACKEND_URL, json=data_to_send.dict(), headers={"Authorization": "UserId 5"})
-        #   if response.status_code == 200:
-        #     # 응답 코드가 200일 때, OK를 반환합니다.
-        #     return "OK"
-        #   else:
-        #     # 응답 코드가 200이 아닐 때, 에러 코드와 메시지를 출력합니다.
-        #     error_message = f"Error: {response.status_code}, {response.text}"
-        #     print(error_message)
-        #     return error_message
 
 # imageIdentifiers 수신, labels 전송
 @router.post("/quest/{QUEST_ID}/shot")
@@ -70,6 +59,7 @@ async def receive_data(QUEST_ID: int, payload: DataPayload, background_tasks: Ba
         return {"message": "Data received, processing in background"}
 
     except ValidationError as e:
+        print(e)
         # 유효성 검사 실패 시 예외 처리
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:

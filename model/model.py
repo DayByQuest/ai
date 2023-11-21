@@ -5,14 +5,16 @@ import clip
 import json
 import requests
 import io
+import os
 from typing import List
 
 class classifier():
   def __init__(self):
     self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
     self.model, self.preprocess = clip.load("RN50")
-    labels_url = 'https://storage.googleapis.com/download.tensorflow.org/data/imagenet_class_index.json'
-    self.labels = json.loads(requests.get(labels_url).text)
+
+    LABEL_URL = os.getenv('LABEL_URL')  
+    self.labels = json.loads(requests.get(LABEL_URL).text)
 	
     self.model.to(self.device).eval()
 

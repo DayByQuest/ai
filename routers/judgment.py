@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ValidationError
 from typing import List
 from fastapi.responses import JSONResponse
-from model.model import classifier
+from dependencies import get_model
 import httpx
 import asyncio
 import io
@@ -24,30 +24,23 @@ async def get_image_from_cdn(cdn_url: str) -> bytes:
         response = await client.get(cdn_url)
 
     if response.status_code != 200:
-        raise HTTPException(status_code=400, detail="이미지를 가져오는데 실패했습니다.")
+        raise HTTPException(status_code=400, detail="이미지를 가져오는데 실패했습니다.") # exception이 아니라 로그에 print만 할 것
 
     return response.content
 
 async def run_model(image_data: list, label: str, BACKEND_URL: str, CLOUDFRONT_URL: str):
-    images = await asyncio.gather(*[get_image_from_cdn(CLOUDFRONT_URL + cdn_url) for cdn_url in image_data])
+    images = await asyncio.gather(*[get_image_from_cdn(CLOUDFRONT_URL + cdn_url) for cdn_url in image_data]) # 안 될 경우 세 번 더 시도, 안 되면 로그로 남기고 종료.
     
-    instant_classifier = classifier()
-    
-    success = instant_classifier.classify_judgment(images, label)
+    model = get_model()
+    success = model.classify_judgment(images, label)
     # success="SUCCESS" # 디버깅용 코드
 
+    print("Inference Finished.")
     data_to_send = DataToSend(judgement=success)
     async with httpx.AsyncClient() as client:
           response = await client.patch(BACKEND_URL, json=data_to_send.dict(), headers={"Authorization": "UserId 5"})
-        #   if response.status_code == 200:
-        #     # 응답 코드가 200일 때, OK를 반환합니다.
-        #     return "OK"
-        #   else:
-        #     # 응답 코드가 200이 아닐 때, 에러 코드와 메시지를 출력합니다.
-        #     error_message = f"Error: {response.status_code}, {response.text}"
-        #     print(error_message)
-        #     return error_message
 
+# imageIdentifiers, label 수신, judgement 전송
 @router.post("/post/{POST_ID}/judge")
 async def receive_data(POST_ID: int, payload: DataPayload, background_tasks: BackgroundTasks):
     try:
@@ -65,6 +58,7 @@ async def receive_data(POST_ID: int, payload: DataPayload, background_tasks: Bac
         return {"message": "Data received, processing in background"}
 
     except ValidationError as e:
+        print(e)
         # 유효성 검사 실패 시 예외 처리
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
