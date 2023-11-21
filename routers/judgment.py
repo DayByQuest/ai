@@ -19,18 +19,30 @@ class DataPayload(BaseModel):
 class DataToSend(BaseModel):
   judgement: str
 
-async def get_image_from_cdn(cdn_url: str) -> bytes:
-    async with httpx.AsyncClient() as client:
-        response = await client.get(cdn_url)
+async def get_image_from_cdn(cdn_url: str, trial_num: int = 3) -> bytes:
+    # 안 될 경우 세 번 더 시도, 안 되면 로그로 남기고 종료.
+    # 위 동작이 필요한 이유 : 스프링 서버에서 이미지를 S3에 업로드하는 시점이 이미지를 가져오는 시점보다 늦을 수 있어서.
+    for attempt in range(trial_num):
+        async with httpx.AsyncClient() as client:
+            response = await client.get(cdn_url)
+        if response.status_code == 200:
+            return response.content
+        else:
+            print(f"Attempt {attempt + 1} failed")
 
-    if response.status_code != 200:
-        raise HTTPException(status_code=400, detail="이미지를 가져오는데 실패했습니다.") # exception이 아니라 로그에 print만 할 것
+        if attempt < trial_num - 1:
+            await asyncio.sleep(1)  # 잠시 대기 후 재시도
 
-    return response.content
+    print(f"Failed to fetch image from {cdn_url} after {trial_num} attempts.")
+    return None 
 
 async def run_model(image_data: list, label: str, BACKEND_URL: str, CLOUDFRONT_URL: str):
-    images = await asyncio.gather(*[get_image_from_cdn(CLOUDFRONT_URL + cdn_url) for cdn_url in image_data]) # 안 될 경우 세 번 더 시도, 안 되면 로그로 남기고 종료.
+    images = await asyncio.gather(*[get_image_from_cdn(CLOUDFRONT_URL + cdn_url) for cdn_url in image_data]) 
     
+    if None in images:
+        print("It is failed to load images. Aborting model inference.")
+        return
+
     model = get_model()
     success = model.classify_judgment(images, label)
     # success="SUCCESS" # 디버깅용 코드
