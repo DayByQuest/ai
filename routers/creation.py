@@ -28,11 +28,11 @@ async def get_image_from_cdn(cdn_url: str) -> bytes:
     return response.content
 
 
-async def run_model(image_data: list, BACKEND_URL: str):
+async def run_model(image_data: list, BACKEND_URL: str, CLOUDFRONT_URL: str):
     # AI 모델 추론 수행
     # 예: result = model.predict(image_data)
 
-    images = await asyncio.gather(*[get_image_from_cdn("https://d1idwg6sscgubz.cloudfront.net/" + cdn_url) for cdn_url in image_data])
+    images = await asyncio.gather(*[get_image_from_cdn(CLOUDFRONT_URL + cdn_url) for cdn_url in image_data])
     
     instant_classifier = classifier()
     
@@ -52,7 +52,7 @@ async def run_model(image_data: list, BACKEND_URL: str):
         #     print(error_message)
         #     return error_message
 
-
+# imageIdentifiers 수신, labels 전송
 @router.post("/quest/{QUEST_ID}/shot")
 async def receive_data(QUEST_ID: int, payload: DataPayload, background_tasks: BackgroundTasks):
     try:
@@ -62,9 +62,11 @@ async def receive_data(QUEST_ID: int, payload: DataPayload, background_tasks: Ba
         # 백엔드 서버의 엔드포인트 URL
         BACKEND_URL = os.getenv('BACKEND_URL')  
         BACKEND_URL = BACKEND_URL + "/quest/" + str(QUEST_ID) + "/shot"
+
+        CLOUDFRONT_URL = os.getenv('CLOUDFRONT_URL')  
         
         # 필요한 데이터 처리 및 클라이언트에게 빠른 응답
-        background_tasks.add_task(run_model, payload.imageIdentifiers, BACKEND_URL)
+        background_tasks.add_task(run_model, payload.imageIdentifiers, BACKEND_URL, CLOUDFRONT_URL)
         return {"message": "Data received, processing in background"}
 
     except ValidationError as e:
