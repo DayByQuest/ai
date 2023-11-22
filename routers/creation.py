@@ -4,6 +4,7 @@ from pydantic import BaseModel, ValidationError
 from typing import List
 from fastapi.responses import JSONResponse
 from dependencies import get_model
+from datetime import datetime
 import httpx
 import asyncio
 import io
@@ -39,7 +40,8 @@ async def run_model(image_data: list, BACKEND_URL: str, CLOUDFRONT_URL: str):
     images = await asyncio.gather(*[get_image_from_cdn(CLOUDFRONT_URL + cdn_url) for cdn_url in image_data])
     
     if None in images:
-        print("It is failed to load images. Aborting model inference.")
+        now = datetime.today().strftime("%Y-%m-%d %H:%M:%S") 
+        print(now + " Aborting model inference.")
         return
         
     model = get_model()    
@@ -47,7 +49,8 @@ async def run_model(image_data: list, BACKEND_URL: str, CLOUDFRONT_URL: str):
     label_list = list(set(label_list))
     # label_list = ['banana', 'apple', 'train'] # 디버깅용 코드
 
-    print("Inference Finished.")
+    now = datetime.today().strftime("%Y-%m-%d %H:%M:%S") 
+    print(now + " Inference Finished.")
     data_to_send = DataToSend(labels=label_list)
     async with httpx.AsyncClient() as client:
           response = await client.patch(BACKEND_URL, json=data_to_send.dict(), headers={"Authorization": "UserId 5"})
