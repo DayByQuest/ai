@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 import uvicorn
 from uvicorn.config import LOGGING_CONFIG
+from dependencies import get_model
 
 load_dotenv()
 
@@ -34,6 +35,7 @@ async def root():
     return {"DayByQuest. The default page."}
 
 if __name__ == '__main__':
+    get_model()
     DATE_FMT = "%Y-%m-%d %H:%M:%S"
     LOGGING_CONFIG["formatters"]["access"]["fmt"] = '%(asctime)s [%(levelname)s] [%(filename)s] [%(process)d] %(client_addr)s - "%(request_line)s" %(status_code)s'
     LOGGING_CONFIG["formatters"]["default"]["fmt"] = "%(asctime)s [%(levelname)s] [%(filename)s] - %(message)s"
