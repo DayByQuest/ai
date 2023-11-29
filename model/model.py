@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 from PIL import Image
-# import clip
 import jax
 import json
 import requests
@@ -15,8 +14,8 @@ class classifier():
     self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
     self.model, self.processor = load_koclip("koclip-base")
 
-    LABEL_PATH = os.getenv('LABEL_PATH')  
-    with open(LABEL_PATH, "r") as f:
+    self.LABEL_PATH = os.getenv('LABEL_PATH')  
+    with open(self.LABEL_PATH, "r") as f:
       self.labels = f.readlines()
     self.labels = [label.strip() for label in self.labels]
 
@@ -66,6 +65,13 @@ class classifier():
     return top_probs, label_list
 
   def classify_judgment(self, source: List[str], label: str):
+    # label이 전체 label list에 없을 경우, 추가해준다.
+    if label not in self.labels:
+      with open(self.LABEL_PATH, "a") as f:
+        f.write(label+"\n")
+      self.labels.append(label)
+      self.text = [f"이것은 {label}이다." for label in self.labels]
+
     images = []
     for src in source:
       image = Image.open(io.BytesIO(src))
