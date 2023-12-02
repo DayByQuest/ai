@@ -20,7 +20,11 @@ class classifier():
     text_descriptions = [f"This is a photo of a {label}" for label in self.labels]
     self.text_tokens = clip.tokenize(text_descriptions).to(self.device)
     self.model.to(self.device).eval()
-    
+
+    url_for_deepl = 'https://api-free.deepl.com/v2/translate'
+    AUTH_KEY = os.getenv('AUTH_KEY')
+    self.params = {'auth_key' : AUTH_KEY, 'text' : '', 'source_lang' : 'EN', 'target_lang': 'KO' }
+
   def __del__(self):
     print("메모리를 해제합니다.")
 
@@ -43,9 +47,28 @@ class classifier():
     label_list = [[self.labels[index] for index in top_labels[i].numpy()] for i in range(len(images))]
     label_list = np.array(label_list).flatten().tolist()
     print(label_list)
-    return top_probs, label_list
+
+    # 영어 -> 한국어로 번역해서 레이블 리스트 전달
+    ko_label_list = []
+    for label in label_list:
+      message = imagenet_labels[index]
+      self.params['text'] = message
+      self.params['source_lang'] = 'EN' 
+      self.params['target_lang'] = 'KO'
+      result = requests.post(url_for_deepl, data=self.params, verify=False)
+      ko_label_list.append(result.json()['translations'][0]["text"])
+      
+    return top_probs, ko_label_list
 
   def classify_judgment(self, source: List[str], label: str):
+    # 한국어 -> 영어
+    message = label
+    self.params['text'] = message
+    self.params['source_lang'] = 'KO'
+    self.params['target_lang'] = 'EN'
+    result = requests.post(url_for_deepl, data=self.params, verify=False)
+    label = result.json()['translations'][0]["text"]
+
     images = []
     for src in source:
       image = Image.open(io.BytesIO(src))
@@ -82,6 +105,14 @@ class classifier():
         return "SUCCESS"
 
   def update_labels(self, label):
+    # 한국어 -> 영어
+    message = label
+    self.params['text'] = message
+    self.params['source_lang'] = 'KO'
+    self.params['target_lang'] = 'EN'
+    result = requests.post(url_for_deepl, data=self.params, verify=False)
+    label = result.json()['translations'][0]["text"]
+
     # label이 전체 label list에 없을 경우, 추가해준다.
     if label not in self.labels:
       LABEL_PATH = os.getenv('LABEL_PATH')
