@@ -49,14 +49,11 @@ class classifier():
     print(label_list)
 
     # 영어 -> 한국어로 번역해서 레이블 리스트 전달
-    ko_label_list = []
-    for label in label_list:
-      message = imagenet_labels[index]
-      self.params['text'] = message
-      self.params['source_lang'] = 'EN' 
-      self.params['target_lang'] = 'KO'
-      result = requests.post(url_for_deepl, data=self.params, verify=False)
-      ko_label_list.append(result.json()['translations'][0]["text"])
+    self.params['text'] = label_list
+    self.params['source_lang'] = 'EN' 
+    self.params['target_lang'] = 'KO'
+    result = requests.post(url_for_deepl, data=self.params, verify=False)
+    ko_label_list = [result.json()['translations'][i]["text"] for i in range(len(result.json()['translations']))]
       
     return top_probs, ko_label_list
 
