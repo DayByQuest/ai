@@ -17,6 +17,7 @@ class classifier():
     LABEL_URL = os.getenv('LABEL_URL')
     self.labels_json = json.loads(requests.get(LABEL_URL).text)
     self.labels = [self.labels_json[str(k)][1] for k in range(len(self.labels_json))]
+    self.labels = [item.replace('_', ' ') for item in self.labels]
     text_descriptions = [f"This is a photo of a {label}" for label in self.labels]
     self.text_tokens = clip.tokenize(text_descriptions).to(self.device)
     self.model.to(self.device).eval()
