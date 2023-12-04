@@ -53,7 +53,7 @@ async def run_model(image_data: list, label: str, BACKEND_URL: str, CLOUDFRONT_U
     print(now + " Inference Finished.")
     data_to_send = DataToSend(judgement=success)
     async with httpx.AsyncClient() as client:
-          response = await client.patch(BACKEND_URL, json=data_to_send.dict(), headers={"Authorization": "UserId 5"})
+          response = await client.patch(BACKEND_URL, json=data_to_send.dict(), headers={"Authorization": "UserId 5", 'Content-Type': 'application/json'})
 
 # imageIdentifiers, label 수신, judgement 전송
 @router.post("/post/{POST_ID}/judge")

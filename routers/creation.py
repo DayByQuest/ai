@@ -15,7 +15,7 @@ router = APIRouter()
 
 class DataPayload(BaseModel):
     imageIdentifiers: list
-    label: str
+    imageDescription: str
 
 class DataToSend(BaseModel):
     labels: List[str]
@@ -54,7 +54,7 @@ async def run_model(image_data: list, BACKEND_URL: str, CLOUDFRONT_URL: str, lab
     print(now + " Inference Finished.")
     data_to_send = DataToSend(labels=label_list)
     async with httpx.AsyncClient() as client:
-        response = await client.patch(BACKEND_URL, json=data_to_send.dict(), headers={"Authorization": "UserId 5"})
+        response = await client.patch(BACKEND_URL, json=data_to_send.dict(), headers={"Authorization": "UserId 5", 'Content-Type': 'application/json'})
     model.update_labels(label)
 
 # imageIdentifiers 수신, labels 전송
@@ -71,7 +71,7 @@ async def receive_data(QUEST_ID: int, payload: DataPayload, background_tasks: Ba
         CLOUDFRONT_URL = os.getenv('CLOUDFRONT_URL')  
         
         # 필요한 데이터 처리 및 클라이언트에게 빠른 응답
-        background_tasks.add_task(run_model, payload.imageIdentifiers, BACKEND_URL, CLOUDFRONT_URL, payload.label)
+        background_tasks.add_task(run_model, payload.imageIdentifiers, BACKEND_URL, CLOUDFRONT_URL, payload.imageDescription)
         return {"message": "Data received, processing in background"}
 
     except ValidationError as e:
