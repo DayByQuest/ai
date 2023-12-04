@@ -15,6 +15,7 @@ router = APIRouter()
 
 class DataPayload(BaseModel):
     imageIdentifiers: list
+    imageDescription: str
 
 class DataToSend(BaseModel):
     labels: List[str]
@@ -36,7 +37,7 @@ async def get_image_from_cdn(cdn_url: str, trial_num: int = 3) -> bytes:
     print(f"Failed to fetch image from {cdn_url} after {trial_num} attempts.")
     return None 
 
-async def run_model(image_data: list, BACKEND_URL: str, CLOUDFRONT_URL: str):
+async def run_model(image_data: list, BACKEND_URL: str, CLOUDFRONT_URL: str, label: str):
     images = await asyncio.gather(*[get_image_from_cdn(CLOUDFRONT_URL + cdn_url) for cdn_url in image_data])
     
     if None in images:
@@ -46,14 +47,15 @@ async def run_model(image_data: list, BACKEND_URL: str, CLOUDFRONT_URL: str):
         
     model = get_model()    
     top_probs, label_list = model.classify_creation(images)
-    label_list = list(set(label_list))
+    label_list = list(set(label_list + [label]))
     # label_list = ['banana', 'apple', 'train'] # 디버깅용 코드
 
     now = datetime.today().strftime("%Y-%m-%d %H:%M:%S") 
     print(now + " Inference Finished.")
     data_to_send = DataToSend(labels=label_list)
     async with httpx.AsyncClient() as client:
-          response = await client.patch(BACKEND_URL, json=data_to_send.dict(), headers={"Authorization": "UserId 5"})
+        response = await client.patch(BACKEND_URL, json=data_to_send.dict(), headers={"Authorization": "UserId 5", 'Content-Type': 'application/json'})
+    model.update_labels(label)
 
 # imageIdentifiers 수신, labels 전송
 @router.post("/quest/{QUEST_ID}/shot")
@@ -69,7 +71,7 @@ async def receive_data(QUEST_ID: int, payload: DataPayload, background_tasks: Ba
         CLOUDFRONT_URL = os.getenv('CLOUDFRONT_URL')  
         
         # 필요한 데이터 처리 및 클라이언트에게 빠른 응답
-        background_tasks.add_task(run_model, payload.imageIdentifiers, BACKEND_URL, CLOUDFRONT_URL)
+        background_tasks.add_task(run_model, payload.imageIdentifiers, BACKEND_URL, CLOUDFRONT_URL, payload.imageDescription)
         return {"message": "Data received, processing in background"}
 
     except ValidationError as e:
