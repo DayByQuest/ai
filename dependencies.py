@@ -1,7 +1,8 @@
+# dependencies.py
+
 from model.model import classifier
 
-# dependencies.py
-class SingletonModel:
+class ClassifyModel:
     _instance = None
 
     @classmethod
@@ -18,4 +19,4 @@ class SingletonModel:
         return model
 
 def get_model():
-    return SingletonModel.get_instance()
+    return ClassifyModel.get_instance()
