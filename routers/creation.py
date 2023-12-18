@@ -49,7 +49,8 @@ async def run_model(image_data: list, BACKEND_URL: str, CLOUDFRONT_URL: str, lab
     top_probs, label_list = model.classify_creation(images)
     label_list = list(set(label_list + [label]))
     # label_list = ['banana', 'apple', 'train'] # 디버깅용 코드
-
+    print(label_list)
+    
     now = datetime.today().strftime("%Y-%m-%d %H:%M:%S") 
     print(now + " Inference Finished.")
     data_to_send = DataToSend(labels=label_list)

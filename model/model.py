@@ -54,7 +54,6 @@ class classifier():
     top_probs, top_labels = text_probs.cpu().topk(5, dim=-1)
     label_list = [[self.labels[index] for index in top_labels[i].numpy()] for i in range(len(images))]
     label_list = np.array(label_list).flatten().tolist()
-    print(label_list)
 
     # 영어 -> 한국어로 번역해서 레이블 리스트 전달
     self.params['text'] = label_list
@@ -62,7 +61,6 @@ class classifier():
     self.params['target_lang'] = 'KO'
     result = requests.post(self.url_for_deepl, data=self.params, verify=False)
     ko_label_list = [result.json()['translations'][i]["text"] for i in range(len(result.json()['translations']))]
-    print(ko_label_list)
     
     return top_probs, ko_label_list
 
@@ -94,6 +92,7 @@ class classifier():
     
     candidates = []
     for i in range(len(images)):
+      print("image", i, " / top-1 :", self.labels[top_labels[i][0]], top_probs[i][0], "/ top-2 :", self.labels[top_labels[i][1]], top_probs[i][1])
       if self.labels[top_labels[i][0]] == label:
         candidates.append(i)
     
